@@ -17,65 +17,82 @@
 package com.example.nav3recipes.basicsaveable
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.runtime.rememberSavedStateNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
-import com.example.nav3recipes.content.ContentBlue
-import com.example.nav3recipes.content.ContentGreen
-import com.example.nav3recipes.ui.setEdgeToEdgeConfig
+import androidx.navigation3.ui.rememberSceneSetupNavEntryDecorator
 import kotlinx.serialization.Serializable
 
-/**
- * Basic example with a persistent back stack state.
- *
- * The back stack persists config changes because it's created using `rememberNavBackStack`. This
- * requires that the back stack keys be both serializable and implement `NavKey`.
- */
-
 @Serializable
-private data object RouteA : NavKey
+data object RouteA : NavKey
 
-@Serializable
-private data class RouteB(val id: String) : NavKey
 
 class BasicSaveableActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        setEdgeToEdgeConfig()
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        setContent {
-            val backStack = rememberNavBackStack(RouteA)
 
-            NavDisplay(
-                backStack = backStack,
-                onBack = { backStack.removeLastOrNull() },
-                entryProvider = { key ->
-                    when (key) {
-                        is RouteA -> NavEntry(key) {
-                            ContentGreen("Welcome to Nav3") {
-                                Button(onClick = {
-                                    backStack.add(RouteB("123"))
-                                }) {
-                                    Text("Click to navigate")
+        setContent {
+            setContent {
+                val backStack = rememberNavBackStack(RouteA)
+
+                val popBackStack = {
+                    if (backStack.size > 1) {
+                        backStack.removeLastOrNull()
+                    }
+                }
+
+                NavDisplay(
+                    entryDecorators = listOf(
+                        rememberSceneSetupNavEntryDecorator(),
+                        rememberSavedStateNavEntryDecorator(),
+                        rememberViewModelStoreNavEntryDecorator(),
+                    ),
+                    backStack = backStack,
+                    onBack = { popBackStack() },
+                    entryProvider = { key ->
+                        NavEntry(key) {
+                            val state = rememberPagerState(pageCount = { 2 })
+
+                            BackHandler(enabled = state.currentPage == 1) {
+                                Log.i("repro", "BackHandler invoked")
+                            }
+
+                            HorizontalPager(state = state) {
+                                when (it) {
+                                    0 -> Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(Color.Red),
+                                    )
+
+                                    1 -> Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(Color.Blue),
+                                    )
                                 }
                             }
                         }
-
-                        is RouteB -> NavEntry(key) {
-                            ContentBlue("Route id: ${key.id} ")
-                        }
-
-                        else -> {
-                            error("Unknown route: $key")
-                        }
-                    }
-                }
-            )
+                    },
+                )
+            }
         }
     }
 }
