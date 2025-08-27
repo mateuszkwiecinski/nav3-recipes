@@ -17,18 +17,17 @@
 package com.example.nav3recipes.basicsaveable
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.Text
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
@@ -36,6 +35,7 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSavedStateNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import androidx.navigation3.ui.rememberSceneSetupNavEntryDecorator
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -49,50 +49,35 @@ class BasicSaveableActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            setContent {
-                val backStack = rememberNavBackStack(RouteA)
+            val backStack = rememberNavBackStack(RouteA)
 
-                val popBackStack = {
-                    if (backStack.size > 1) {
-                        backStack.removeLastOrNull()
-                    }
+            val popBackStack = {
+                if (backStack.size > 1) {
+                    backStack.removeLastOrNull()
                 }
-
-                NavDisplay(
-                    entryDecorators = listOf(
-                        rememberSceneSetupNavEntryDecorator(),
-                        rememberSavedStateNavEntryDecorator(),
-                        rememberViewModelStoreNavEntryDecorator(),
-                    ),
-                    backStack = backStack,
-                    onBack = { popBackStack() },
-                    entryProvider = { key ->
-                        NavEntry(key) {
-                            val state = rememberPagerState(pageCount = { 2 })
-
-                            BackHandler(enabled = state.currentPage == 1) {
-                                Log.i("repro", "BackHandler invoked")
-                            }
-
-                            HorizontalPager(state = state) {
-                                when (it) {
-                                    0 -> Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(Color.Red),
-                                    )
-
-                                    1 -> Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(Color.Blue),
-                                    )
-                                }
-                            }
-                        }
-                    },
-                )
             }
+
+            NavDisplay(
+                entryDecorators = listOf(
+                    rememberSceneSetupNavEntryDecorator(),
+                    rememberSavedStateNavEntryDecorator(),
+                    rememberViewModelStoreNavEntryDecorator(),
+                ),
+                backStack = backStack,
+                onBack = { popBackStack() },
+                entryProvider = { key ->
+                    NavEntry(key) {
+                        val state by observeValues().collectAsStateWithLifecycle(initialValue = null)
+
+                        Text(
+                            modifier = Modifier.windowInsetsPadding(WindowInsets.safeDrawing),
+                            text = "[$key] expected=5, actual=$state; lifecycle=${LocalLifecycleOwner.current.lifecycle.currentState}"
+                        )
+                    }
+                },
+            )
         }
     }
 }
+
+fun observeValues() = flowOf(2, 3, 4, 5)
