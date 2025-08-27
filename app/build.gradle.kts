@@ -56,8 +56,21 @@ android {
     }
 }
 
-dependencies {
+configurations.configureEach {
+    resolutionStrategy {
+        eachDependency {
+            if (requested.group == "androidx.lifecycle") {
+                useVersion(libs.versions.lifecycle.get())
+            }
 
+            if (requested.group == "androidx.navigation3") {
+                useVersion(libs.versions.navigation3.get())
+            }
+        }
+    }
+}
+
+dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -66,7 +79,6 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation(libs.androidx.material3.windowsizeclass)
     implementation(libs.androidx.adaptive.layout)
 
     implementation(libs.kotlinx.serialization.core)
@@ -74,7 +86,6 @@ dependencies {
     implementation(libs.androidx.navigation3.runtime)
     implementation(libs.androidx.navigation3.ui)
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)
-    implementation(libs.androidx.material.icons.extended)
 
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
